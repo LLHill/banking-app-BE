@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=bankapp;trustServerCertificate=true;
+    username: sa
+    password: Hieu2301*
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+logging:
+  level:
+    com.bankin.app: DEBUG
+
+server:
+  error:
+    include-message: always
+
+app:
+  card:
+    available-duration: 5
+    credit:
+      interest-rate: 0.2
+      late-fee: 0.05
+      payment-due-date: 20
+      annual-fee: 5
+      limit: 3000
