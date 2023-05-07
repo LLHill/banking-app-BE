@@ -34,16 +34,15 @@ public class CardService {
     CardConfig cardConfig;
 
     @Autowired
-    AccountRepository accountRepository;
+    private CreditCardRepository creditCardRepository;
 
     @Autowired
-    private CreditCardRepository creditCardRepository;
+    private AccountService accountService;
 
     private static final String INIT_BALANCE = "0";
 
     public CardResp createCard(CardReq cardReq, long userId) throws ServiceException {
-        Account account = accountRepository.findByUserId(userId)
-                .orElseThrow(() ->new ServiceException("User does not exist ---id: "+ userId));
+        Account account = accountService.getAccountByUserId(userId);
         AbstractCard absCard = new AbstractCard();
         absCard.setCardNumber(CardGenerator.generateCardNumber());
         absCard.setPIN(cardReq.getPIN());

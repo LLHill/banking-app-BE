@@ -1,5 +1,6 @@
 package com.bankin.app.entity.transaction;
 
+import com.bankin.app.entity.Account;
 import com.bankin.app.enums.TransferType;
 import lombok.Builder;
 import lombok.Data;
@@ -22,8 +23,8 @@ public class Transfer extends Transaction{
     private String message;
 
     @Builder
-    public Transfer(String transferredAccount, String message, String accountNumber, String amount) {
-        super(accountNumber, amount);
+    public Transfer(String transferredAccount, String message, Account account, String amount) {
+        super(account, amount);
         this.transferredAccount = transferredAccount;
         this.message = message;
         this.transactionType = TRANSFER;

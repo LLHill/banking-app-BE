@@ -1,6 +1,7 @@
 package com.bankin.app.entity;
 
 import com.bankin.app.entity.card.CreditCard;
+import com.bankin.app.entity.transaction.Transfer;
 import com.bankin.app.enums.AccountStatus;
 import lombok.Data;
 
@@ -17,10 +18,10 @@ public class Account extends Auditable<String>{
     private Long id;
 
     @OneToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "id")
-    private User user;
+    @JoinColumn(name = "user_id", referencedColumnName = "id", unique = true)
+    private AppUser user;
 
-    @OneToMany(mappedBy = "linkedAccount")
+    @OneToMany(mappedBy = "linkedAccount", fetch = FetchType.LAZY)
     private List<CreditCard> cards;
 
     @Column(name = "acc_number", unique = true)
@@ -35,4 +36,7 @@ public class Account extends Auditable<String>{
 
     @Column(name = "interest")
     private String interestRate;
+
+    @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
+    private List<Transfer> transactions;
 }

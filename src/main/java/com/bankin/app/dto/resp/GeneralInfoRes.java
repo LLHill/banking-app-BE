@@ -7,10 +7,7 @@ import java.util.List;
 
 @Data
 public class GeneralInfoRes {
-    private String balance;
-    private String accountNumber;
-    private String firstName;
-    private String lastName;
+    private AccountInfo account;
     private List<CreditInfo> cards;
     private List<TransInfo> transInfos;
 }

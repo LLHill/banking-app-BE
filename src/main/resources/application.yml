@@ -18,10 +18,12 @@ server:
 
 app:
   card:
-    available-duration: 5
+    available-duration: 5 #year
     credit:
-      interest-rate: 0.2
-      late-fee: 0.05
-      payment-due-date: 20
-      annual-fee: 5
-      limit: 3000
+      interest-rate: 20 #percentage
+      late-fee: 5 #percentage
+      payment-due-date: 20 #20th of month
+      limit: 3000 #USD
+
+jwt:
+  secret: hvsecret

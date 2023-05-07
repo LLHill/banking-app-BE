@@ -1,9 +1,13 @@
 package com.bankin.app.api;
 
+import com.bankin.app.config.JwtTokenUtil;
+import com.bankin.app.dto.auth.JwtResp;
 import com.bankin.app.dto.auth.LoginReq;
 import com.bankin.app.dto.auth.InitUserReq;
 import com.bankin.app.dto.auth.UserInfoReq;
+import com.bankin.app.entity.AppUser;
 import com.bankin.app.exception.ServiceException;
+import com.bankin.app.repository.UserRepository;
 import com.bankin.app.service.AccountService;
 import com.bankin.app.service.AuthService;
 import lombok.AllArgsConstructor;
@@ -11,6 +15,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -24,17 +34,29 @@ public class AuthController {
     private AuthService authService;
 
     @Autowired
+    private JwtTokenUtil jwtTokenUtil;
+
+    @Autowired
     private AccountService accountService;
 
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
+
+    @Autowired
+    private UserRepository userRepository;
+
     @PostMapping("/login")
-    public ResponseEntity<?> userLogin(@RequestBody LoginReq loginReq){
-        try {
-            log.debug("Getting login request with body: {}", loginReq);
-            return ResponseEntity.ok(authService.userLogin(loginReq));
-        } catch (ServiceException e) {
-            log.error("Login fail with error: {}", e.getMessage());
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
-        }
+    public ResponseEntity<?> jwtLogin(@RequestBody LoginReq loginReq) throws Exception{
+        authenticate(loginReq.getPhone(), loginReq.getPassword());
+        final UserDetails userDetails = userDetailsService.loadUserByUsername(loginReq.getPhone());
+
+        final String token = jwtTokenUtil.generateToken(userDetails);
+        AppUser user = userRepository.findByPhoneNumber(loginReq.getPhone())
+                .orElseThrow(() ->new ServiceException("User does not exist ---phone number: "+ loginReq.getPhone()));
+        return ResponseEntity.ok(new JwtResp(user.getId(), token));
     }
 
     @PostMapping("/init")
@@ -71,5 +93,44 @@ public class AuthController {
         }
     }
 
+    @GetMapping("/create")
+    public ResponseEntity<?> createAccount(@RequestHeader("id") long userId){
+        try{
+            String phone = accountService.createAccount(userId);
+            final UserDetails userDetails = userDetailsService.loadUserByUsername(phone);
 
+            final String token = jwtTokenUtil.generateToken(userDetails);
+
+            return ResponseEntity.ok(new JwtResp(token));
+        } catch (ServiceException e) {
+            log.error("Error occurs: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+    }
+
+    @GetMapping("/face_login")
+    public ResponseEntity<?> faceLogin(@RequestHeader("id") long userId){
+        try{
+            AppUser user = userRepository.findById(userId)
+                    .orElseThrow(() ->new ServiceException("User does not exist ---id: "+ userId));
+            final UserDetails userDetails = userDetailsService.loadUserByUsername(user.getPhoneNumber());
+
+            final String token = jwtTokenUtil.generateToken(userDetails);
+
+            return ResponseEntity.ok(new JwtResp(token));
+        } catch (ServiceException e) {
+            log.error("Error occurs: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+    }
+
+    private void authenticate(String username, String password) throws Exception {
+        try {
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
+        } catch (DisabledException e) {
+            throw new Exception("USER_DISABLED", e);
+        } catch (BadCredentialsException e) {
+            throw new Exception("INVALID_CREDENTIALS", e);
+        }
+    }
 }

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -21,6 +22,7 @@ public class TransactionController {
     TransactionService transactionService;
 
     @PostMapping("/create")
+    @PreAuthorize("@customPermissionEvaluator.isAccountActive()")
     public ResponseEntity<?> createTransfer(@RequestHeader("id") long userId,@RequestBody TransferReq transferReq){
         try{
             return ResponseEntity.ok(transactionService.createTransfer(userId, transferReq));
@@ -38,5 +40,25 @@ public class TransactionController {
             log.error("Error occurs: {}", e.getMessage());
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
+    }
+
+    @PostMapping("/check")
+    @PreAuthorize("@customPermissionEvaluator.isAccountActive()")
+    public ResponseEntity<?> checkTransaction(@RequestHeader("id") long userId,@RequestBody TransferReq transferReq){
+        try{
+            transactionService.checkTransaction(userId, transferReq);
+            return ResponseEntity.ok().build();
+        } catch (ServiceException e) {
+            log.error("Error occurs: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+    }
+
+    public static int inc(int num){
+        return 20;
+    }
+    public static void main(String[] args) {
+        double d = 14.45_5_54_1;
+        System.out.println(d);
     }
 }

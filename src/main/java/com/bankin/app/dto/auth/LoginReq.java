@@ -6,7 +6,7 @@ import lombok.ToString;
 @Data
 public class LoginReq {
 
-    private String email;
+    private String phone;
 
     @ToString.Exclude
     private String password;

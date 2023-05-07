@@ -36,20 +36,16 @@ public class TransactionService {
     @Autowired
     private TransferRepository transferRepository;
 
-    public List<TransInfo> getRecentTransfer(String accountNumber){
-        log.debug("Getting recent transfer in account: " + accountNumber);
-        List<Transfer> transferList = transferRepository.findTop3ByAccountNumberOrderByLastModifiedDateDesc(accountNumber);
-        return createInfoList(transferList);
-    }
+    @Autowired
+    private AccountService accountService;
 
     public List<TotalTransPerDay> getBalanceChange(long userId) throws ServiceException {
         log.debug("Getting account number of userId: " + userId);
-        String accountNumber = accountRepository.findAccountByUserId(userId)
-                .orElseThrow(() ->new ServiceException("User does not exist ---id: "+ userId));
+        Account account = accountService.getAccountByUserId(userId);
         Date dateBefore10days = DateUtils.addDays(new Date(), -10);
-        log.debug("Getting transaction info within 20 days in account: " + accountNumber);
-        List<Transfer> transferList = transferRepository.findByAccountNumberAndLastModifiedDateAfter(accountNumber, dateBefore10days);
-        List<Transfer> receiveList = transferRepository.findByTransferredAccountAndLastModifiedDateAfter(accountNumber, dateBefore10days);
+        log.debug("Getting transaction info within 20 days in account: " + account.getAccountNumber());
+        List<Transfer> transferList = transferRepository.findByAccountAndLastModifiedDateAfter(account, dateBefore10days);
+        List<Transfer> receiveList = transferRepository.findByTransferredAccountAndLastModifiedDateAfter(account.getAccountNumber(), dateBefore10days);
         return computeTotalTransPerDay(
                 getTransPerDayInfo(transferList, dateBefore10days),
                 getTransPerDayInfo(receiveList, dateBefore10days));
@@ -61,8 +57,7 @@ public class TransactionService {
         String transferMessage = transferReq.getMessage();
         String destAcc = transferReq.getTransferredAccount();
         log.info("Get source account with with user id: " + userId);
-        Account source =  accountRepository.findByUserId(userId)
-                .orElseThrow(() -> new ServiceException("User does not exist ---id: " + userId));
+        Account source = accountService.getAccountByUserId(userId);
         log.info("Get destination account with with account number: " + destAcc);
         Account destination = accountRepository.findByAccountNumber(destAcc)
                 .orElseThrow(() -> new ServiceException("Account does not exist ---account number: " + destAcc));
@@ -81,17 +76,16 @@ public class TransactionService {
                 .build();
     }
 
-    private List<TransInfo> createInfoList(List<Transfer> transferList){
-        List<TransInfo> transInfos = new ArrayList<>();
-
-        for (Transfer transfer : transferList){
-            TransInfo transInfo = new TransInfo();
-            transInfo.setTransferDate(strConverter("dd/MM/yyyy", transfer.getLastModifiedDate()));
-            transInfo.setTransferAccount(transfer.getTransferredAccount());
-            transInfo.setAmount(transfer.getAmount());
-            transInfos.add(transInfo);
+    public void checkTransaction(long userId, TransferReq transferReq) throws ServiceException {
+        log.debug("Checking transfer with info: " + transferReq);
+        String destAcc = transferReq.getTransferredAccount();
+        Account source =  accountService.getAccountByUserId(userId);
+        Account dest = accountRepository.findByAccountNumber(destAcc)
+                .orElseThrow(() -> new ServiceException("Account does not exist ---account number: " + destAcc));
+        if (dest.equals(source)){
+            throw new ServiceException("Cannot transfer to the owner account");
         }
-        return transInfos;
+        computeTransfer(source.getBalance(), transferReq.getAmount(), true);
     }
 
     private String computeTransfer(String srcAmount, String addedAmount, boolean isSource) throws ServiceException {
@@ -109,7 +103,7 @@ public class TransactionService {
     private void saveTransfer(Account src, Account dest, String transferMessage, String transferAmount){
         Transfer transfer = Transfer.builder()
                 .transferredAccount(dest.getAccountNumber())
-                .accountNumber(src.getAccountNumber())
+                .account(src)
                 .message(transferMessage)
                 .amount(transferAmount)
                 .build();

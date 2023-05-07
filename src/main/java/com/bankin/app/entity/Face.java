@@ -17,10 +17,11 @@ public class Face {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id")
-    private Long userId;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false, referencedColumnName = "id")
+    private AppUser user;
 
     @Lob
-    @Column(name = "face_img")
-    public byte[] faceImg;
+    @Column(name = "face_img", columnDefinition = "TEXT")
+    public String faceImg;
 }
